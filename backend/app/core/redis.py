@@ -9,10 +9,7 @@ class RedisCache:
         self.client = redis.Redis(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-            db=settings.REDIS_DB,
             decode_responses=False,
-            ssl=settings.REDIS_SSL
         )
         
     async def get(self, key: str):

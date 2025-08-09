@@ -27,5 +27,13 @@ class Settings(BaseModel):
 
     DEV_LOGIN_EMAIL: str = os.getenv("DEV_LOGIN_EMAIL")
     DEV_LOGIN_PASSWORD: str = os.getenv("DEV_LOGIN_PASSWORD")
+    
+    # Redis
+    REDIS_HOST: str = os.getenv("REDIS_HOST")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT"))
+    REDIS_CACHE_TTL: int = int(os.getenv("REDIS_CACHE_TTL"))
+    
+    # Cache strategy
+    CACHE_STRATEGY: str = os.getenv("CACHE_STRATEGY", "redis_first")  # Options: "redis_first", "db_only", "redis_only"
 
 settings = Settings()
