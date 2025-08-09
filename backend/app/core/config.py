@@ -18,6 +18,6 @@ class Settings(BaseModel):
     )
 
     RATE_LIMIT: str = os.getenv("RATE_LIMIT", "10/minute")
-    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")  # comma-separated
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")  
 
 settings = Settings()

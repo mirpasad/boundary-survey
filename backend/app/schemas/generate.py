@@ -6,7 +6,7 @@ QuestionType = Literal["multipleChoice","singleChoice","openQuestion","shortAnsw
 class Question(BaseModel):
     type: QuestionType
     title: str = Field(min_length=1, max_length=500)
-    options: Optional[List[str]] = None  # only for choice types
+    options: Optional[List[str]] = None  
 
 class SurveyOut(BaseModel):
     title: str
