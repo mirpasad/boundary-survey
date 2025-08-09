@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
-from app.core.config import settings
-from app.core.jwt import create_jwt
+from core.config import settings
+from core.jwt import create_jwt
 
 router = APIRouter(tags=["Auth"])
 

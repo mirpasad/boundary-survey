@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, Text, String, DateTime, func
-from app.db.base import Base
+from db.base import Base
 
 class CachedSurvey(Base):
     __tablename__ = "cached_surveys"

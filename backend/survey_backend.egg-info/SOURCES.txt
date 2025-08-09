@@ -1,7 +1,0 @@
-pyproject.toml
-app/__init__.py
-app/main.py
-survey_backend.egg-info/PKG-INFO
-survey_backend.egg-info/SOURCES.txt
-survey_backend.egg-info/dependency_links.txt
-survey_backend.egg-info/top_level.txt

@@ -1,4 +1,4 @@
-from app.schemas.generate import SurveyOut
+from schemas.generate import SurveyOut
 
 def validate_string_length(text: str, min_length: int, max_length: int) -> bool:
     if not text:

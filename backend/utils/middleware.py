@@ -6,7 +6,7 @@ from loguru import logger
 from starlette.responses import JSONResponse
 from starlette.requests import Request
 from typing import Iterable, Optional, Set
-from app.core.jwt import decode_jwt
+from core.jwt import decode_jwt
 from .publicPaths import publicPaths
 from jwt import InvalidTokenError
 

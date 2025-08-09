@@ -4,12 +4,12 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.responses import JSONResponse
 
-from app.core.config import settings
-from app.core.logging import setup_logging
-from app.core.rate_limit import limiter
-from app.router import routers
-from app.utils.middleware import RequestIDMiddleware, JWTAuthMiddleware
-from app.core.redis import redis_client
+from core.config import settings
+from core.logging import setup_logging
+from core.rate_limit import limiter
+from router import routers
+from utils.middleware import RequestIDMiddleware, JWTAuthMiddleware
+from core.redis import redis_client
 
 logger = setup_logging()
 
