@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 
 const CreateSurveyContext = createContext();
 
@@ -16,10 +16,13 @@ export const CreateSurveyProviderMock = ({ children }) => {
       type,
       title: "",
       saved: false,
-      options: type === "multipleChoice" || type === "singleChoice" ? [
-        { id: Date.now() + Math.random(), text: "" },
-        { id: Date.now() + Math.random() + 1, text: "" }
-      ] : []
+      options:
+        type === "multipleChoice" || type === "singleChoice"
+          ? [
+              { id: Date.now() + Math.random(), text: "" },
+              { id: Date.now() + Math.random() + 1, text: "" },
+            ]
+          : [],
     };
     setQuestions((prev) => [...prev, newQuestion]);
   };
@@ -28,37 +31,24 @@ export const CreateSurveyProviderMock = ({ children }) => {
     setQuestions((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAddOption = useCallback((questionIndex) => {
-    if (isAddingOption) {
-      console.log('Already adding option, skipping...');
-      return;
-    }
-    
-    setIsAddingOption(true);
-    console.log('handleAddOption called for question:', questionIndex);
-    
-    setQuestions((prev) => {
-      console.log('Previous questions:', prev);
-      const newQuestions = [...prev];
-      if (!newQuestions[questionIndex].options) {
-        newQuestions[questionIndex].options = [];
-      }
-      const newOption = {
-        id: Date.now() + Math.random(),
-        text: "",
-      };
-      console.log('Adding new option:', newOption);
-      newQuestions[questionIndex].options.push(newOption);
-      console.log('New questions after adding option:', newQuestions);
-      
-      // Reset the flag after the state update
-      setTimeout(() => {
-        setIsAddingOption(false);
-      }, 0);
-      
-      return newQuestions;
-    });
-  }, [isAddingOption]);
+  const handleAddOption = useCallback(
+    (questionIndex) => {
+      if (isAddingOption) return;
+      setIsAddingOption(true);
+
+      setQuestions((prev) => {
+        const newQuestions = [...prev];
+        if (!newQuestions[questionIndex].options) newQuestions[questionIndex].options = [];
+        newQuestions[questionIndex].options.push({
+          id: Date.now() + Math.random(),
+          text: "",
+        });
+        setTimeout(() => setIsAddingOption(false), 0);
+        return newQuestions;
+      });
+    },
+    [isAddingOption]
+  );
 
   const handleTitleChange = (questionIndex, title) => {
     setQuestions((prev) => {
@@ -72,20 +62,18 @@ export const CreateSurveyProviderMock = ({ children }) => {
     setQuestions((prev) => {
       const newQuestions = [...prev];
       newQuestions[questionIndex].type = type;
-      
-      // Ensure multiple choice and single choice questions have at least 2 empty options
+
       if (type === "multipleChoice" || type === "singleChoice") {
         if (!newQuestions[questionIndex].options || newQuestions[questionIndex].options.length < 2) {
           newQuestions[questionIndex].options = [
             { id: Date.now() + Math.random(), text: "" },
-            { id: Date.now() + Math.random() + 1, text: "" }
+            { id: Date.now() + Math.random() + 1, text: "" },
           ];
         }
       } else {
-        // Clear options for non-choice questions
         newQuestions[questionIndex].options = [];
       }
-      
+
       return newQuestions;
     });
   };
@@ -117,32 +105,30 @@ export const CreateSurveyProviderMock = ({ children }) => {
   };
 
   const handleDuplicate = (questionIndex) => {
-    const questionToDuplicate = questions[questionIndex];
-    const duplicatedQuestion = {
-      ...questionToDuplicate,
-      id: Date.now(),
+    const mkId = () => (crypto?.randomUUID?.() || (Date.now() + Math.random()).toString());
+    const q = questions[questionIndex];
+    const duplicated = {
+      ...q,
+      id: mkId(),
       saved: false,
+      options: (q.options || []).map(o => ({ id: mkId(), text: o.text })),
     };
-    setQuestions((prev) => [...prev, duplicatedQuestion]);
+    setQuestions((prev) => [...prev, duplicated]);
   };
 
   const handleDeleteOption = (questionIndex, optionId) => {
     setQuestions((prev) => {
       const newQuestions = [...prev];
       if (newQuestions[questionIndex].options) {
-        const optionIndex = newQuestions[questionIndex].options.findIndex(option => option.id === optionId);
-        if (optionIndex !== -1) {
-          newQuestions[questionIndex].options.splice(optionIndex, 1);
-        }
+        const optionIndex = newQuestions[questionIndex].options.findIndex((option) => option.id === optionId);
+        if (optionIndex !== -1) newQuestions[questionIndex].options.splice(optionIndex, 1);
       }
       return newQuestions;
     });
   };
 
   const onDragEnd = (result) => {
-    if (!result.destination) {
-      return;
-    }
+    if (!result.destination) return;
     const items = Array.from(questions);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
@@ -155,6 +141,23 @@ export const CreateSurveyProviderMock = ({ children }) => {
       description: surveyDescription,
       questions,
     });
+  };
+
+  const loadFromJSON = (survey) => {
+    const mkId = () => (crypto?.randomUUID?.() || (Date.now() + Math.random()).toString());
+    setSurveyTitle(survey.title || "");
+    setSurveyDescription(survey.description || "");
+    const allowed = new Set(["multipleChoice","singleChoice","openQuestion","shortAnswer","scale","npsScore"]);
+    const normalized = (survey.questions || [])
+      .filter(q => q?.type && allowed.has(q.type) && q.title)
+      .map((q) => ({
+        id: mkId(),
+        type: q.type,
+        title: q.title,
+        saved: false,
+        options: (q.options || []).map((opt) => ({ id: mkId(), text: opt })),
+      }));
+    setQuestions(normalized);
   };
 
   return (
@@ -180,6 +183,7 @@ export const CreateSurveyProviderMock = ({ children }) => {
         onDragEnd,
         dupList,
         handleCreateSurvey,
+        loadFromJSON,
       }}
     >
       {children}
@@ -187,5 +191,4 @@ export const CreateSurveyProviderMock = ({ children }) => {
   );
 };
 
-// Hook to use in your components
 export const useCreateSurveyProvider = () => useContext(CreateSurveyContext);

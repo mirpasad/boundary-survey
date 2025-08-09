@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { PlusIcon2 } from "./Icons";
 import QuestionList from "./QuestionList";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 
 const CreateSurvey = () => {
   const {
@@ -13,12 +14,44 @@ const CreateSurvey = () => {
     surveyTitle,
     surveyDescription,
     addNewQuestion,
+    loadFromJSON,
   } = useCreateSurveyProvider();
 
   const [titleLength, setTitleLength] = useState(0);
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [titleError, setTitleError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    if (isGenerating) return;
+    const description = window.prompt("Describe your survey:");
+    if (!description) return;
+
+    try {
+      setIsGenerating(true);
+      const res = await fetch("/api/surveys/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-KEY": "dev-token-123",
+        },
+        body: JSON.stringify({ description }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      const json = await res.json();
+      loadFromJSON(json);
+      toast.success("Survey generated");
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || "Failed to generate survey");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     setTitleLength(surveyTitle?.length || 0);
@@ -42,7 +75,9 @@ const CreateSurvey = () => {
               const value = e.target.value;
               setSurveyTitle(value);
               setTitleLength(value.length);
-              setTitleError(value.length >= 500 ? "Title cannot exceed 500 characters." : "");
+              setTitleError(
+                value.length >= 500 ? "Title cannot exceed 500 characters." : ""
+              );
             }}
             placeholder="Enter survey title"
             className="text-[16px] px-5 pt-4 pb-1 text-primary outline-none border-none bg-transparent rounded-t-[12px] transition-all duration-200"
@@ -55,7 +90,7 @@ const CreateSurvey = () => {
           </div>
         </motion.div>
 
-        {/* Description Input */}
+        {/* Description Input + Generate */}
         <motion.div
           whileHover={{ boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)" }}
           className="rounded-[12px] shadow-sm w-full border border-[#00000020] bg-white flex flex-col transition-all duration-300"
@@ -70,7 +105,9 @@ const CreateSurvey = () => {
               const value = e.target.value;
               setSurveyDescription(value);
               setDescriptionLength(value.length);
-              setDescriptionError(value.length >= 100 ? "Description cannot exceed 100 characters." : "");
+              setDescriptionError(
+                value.length >= 100 ? "Description cannot exceed 100 characters." : ""
+              );
             }}
             className="text-[16px] px-5 pt-4 pb-1 text-primary outline-none border-none bg-transparent rounded-t-[12px] transition-all duration-200"
           />
@@ -82,9 +119,19 @@ const CreateSurvey = () => {
               <p className="text-red-500 text-xs">{descriptionError}</p>
             )}
           </div>
+
+          <div className="px-5 pb-4">
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className={`btn-square-style !bg-[#6851A7] !border-[#6851A7] ${isGenerating ? "opacity-70 cursor-not-allowed" : ""}`}
+              aria-busy={isGenerating}
+            >
+              {isGenerating ? "Generating..." : "Generate Survey (AI)"}
+            </button>
+          </div>
         </motion.div>
       </div>
-
 
       {/* Question List */}
       <div className="flex-1">
@@ -93,7 +140,7 @@ const CreateSurvey = () => {
 
       {/* Add Question Button */}
       <motion.div
-        whileHover={{ scale: 1.01, borderColor: '#6851a7 ' }}
+        whileHover={{ scale: 1.01, borderColor: "#6851a7" }}
         className="border-2 py-4 md:py-5 lg:py-6 rounded-[12px] flex justify-center border-dotted border-[#6851a7] bg-[#6851a7]/5 transition-all duration-300"
       >
         <motion.button
