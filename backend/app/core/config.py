@@ -19,5 +19,12 @@ class Settings(BaseModel):
 
     RATE_LIMIT: str = os.getenv("RATE_LIMIT", "10/minute")
     CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")  
+    
+     # JWT
+    JWT_SECRET: str = os.getenv("JWT_SECRET")
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM")
+
+    DEV_LOGIN_EMAIL: str = os.getenv("DEV_LOGIN_EMAIL")
+    DEV_LOGIN_PASSWORD: str = os.getenv("DEV_LOGIN_PASSWORD")
 
 settings = Settings()
