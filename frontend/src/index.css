@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  .auth-heading {
+    @apply text-xl lg:text-black text-white md:text-[22px] lg:text-2xl font-quicksand;
+  }
+  .auth-sub-heading {
+    @apply text-lg md:text-xl font-switzer text-white;
+  }
+  .underline-btn {
+    @apply text-sm md:text-base font-switzer hover:text-btn-bg transition-all duration-150 ease-in-out text-white border-b border-white hover:border-btn-bg;
+  }
+  .common-text {
+    @apply text-sm lg:text-sm font-switzerMedium text-primary;
+  }
+  .table-heading {
+    @apply text-sm xl:text-base font-switzer text-cool-gray font-normal;
+  }
+  .tabel-data {
+    @apply text-[14px] xl:text-xs font-switzer text-primary font-normal;
+  }
+  .primary-text {
+    @apply text-sm lg:text-sm xl:text-base text-primary font-switzerMedium;
+  }
+  .input-style {
+    @apply bg-transparent p-2 h-10 lg:h-11 lg:text-base text-sm w-full !px-2 font-normal font-switzer rounded-[5px] border-lightlavender border;
+  }
+  .btn-icon-style {
+    @apply w-4 h-4 group-hover:border-btn-bg group-hover:fill-btn-bg border fill-white border-white rounded-full flex items-center justify-center;
+  }
+  .btn-square-style {
+    @apply gap-4 px-3 sm:px-4 md:px-5 bg-btn-bg hover:bg-transparent hover:text-btn-bg py-2 flex items-center justify-center rounded-lg  font-switzer  text-white text-sm lg:text-base xl:text-[17px]  border border-btn-bg duration-150 ease-in-out transition-all w-fit whitespace-nowrap;
+  }
+  .final-submission-text {
+    @apply text-sm lg:text-sm xl:text-base text-primary font-switzer font-normal;
+  }
+  .topic-btn-style {
+    @apply px-3 py-1 rounded-lg border-2 border-btn-bg text-sm lg:text-sm xl:text-lg text-btn-bg font-switzerMedium font-medium;
+  }
+  .article-btn-style {
+    @apply px-3 py-1 cursor-pointer rounded-lg border-2 border-btn-bg text-base  2xl:text-base 3xl:text-lg text-btn-bg font-switzerMedium font-medium hover:bg-btn-bg hover:text-white transition-all duration-150 ease-in-out;
+  }
+  .active-btn-style {
+    @apply flex items-center gap-2 px-3 h-8 rounded-[100px] border border-lightlavender bg-white text-sm font-switzerMedium font-medium text-primary;
+  }
+}
+
+.scrollbar-style::-webkit-scrollbar {
+  width: 4px;
+  border-radius: 12px;
+}
+
+.scrollbar-style::-webkit-scrollbar-track {
+  background-color: #f1f1f1;
+  border-radius: 12px;
+}
+
+.scrollbar-style::-webkit-scrollbar-thumb {
+  background-color: #8c899c;
+  border-radius: 12px;
+}
+.custom-select-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-select-scrollbar::-webkit-scrollbar-thumb {
+  width: 4px;
+  border-radius: 100px;
+  background: var(--Grey-150, #f1f1f1);
+}
