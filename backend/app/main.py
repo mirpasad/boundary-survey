@@ -7,14 +7,13 @@ from starlette.responses import JSONResponse
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.core.rate_limit import limiter
-from app.api.routes import router
+from app.api.router import routers
 from app.utils.middleware import RequestIDMiddleware, JWTAuthMiddleware
 
 logger = setup_logging()
 
-app = FastAPI(title="Survey Generator API", version="1.0.0")
+app = FastAPI(title="Survey Generator API", docs_url="/docs", version="1.0.0")
 app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)
 
 origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
@@ -23,18 +22,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 app.add_middleware(
     JWTAuthMiddleware,
-    allow_paths={"/health", "/openapi.json", "/docs", "/docs/oauth2-redirect"},
 )
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(SlowAPIMiddleware)
 
-app.include_router(router, prefix=settings.API_PREFIX)
-
-@app.get("/health")
-def health():
-    return {"ok": True}
+# Include all routers from the router package
+for router in routers:
+    app.include_router(router)
 
 @app.exception_handler(RateLimitExceeded)
 def ratelimit_handler(request, exc):

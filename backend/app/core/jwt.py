@@ -12,10 +12,6 @@ def decode_jwt(token: str) -> Dict[str, Any]:
         "algorithms": [settings.JWT_ALGORITHM],
         "options": options,
     }
-    if settings.JWT_ISSUER:
-        kwargs["issuer"] = settings.JWT_ISSUER
-    if settings.JWT_AUDIENCE:
-        kwargs["audience"] = settings.JWT_AUDIENCE
     return jwt.decode(token, settings.JWT_SECRET, **kwargs)
 
 
@@ -31,10 +27,6 @@ def create_jwt(
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(seconds=expires_in_seconds)).timestamp()),
     }
-    if settings.JWT_ISSUER:
-        payload["iss"] = settings.JWT_ISSUER
-    if settings.JWT_AUDIENCE:
-        payload["aud"] = settings.JWT_AUDIENCE
     if extra:
         payload.update(extra)
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
