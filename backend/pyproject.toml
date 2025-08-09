@@ -1,7 +1,40 @@
-[project]
-name = "survey-backend"
-version = "0.0.0"
-requires-python = ">=3.11"
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
 
-[tool.setuptools]
+[project]
+name = "boundary-survey-backend"
+version = "0.1.0"
+description = "FastAPI backend for AI-powered survey generation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mir Pasad" }]
+
+dependencies = [
+  "fastapi==0.115.0",
+  "uvicorn[standard]==0.30.6",
+  "pydantic==2.8.2",
+  "SQLAlchemy==2.0.32",
+  "psycopg[binary]==3.2.9",
+  "python-dotenv==1.0.1",
+  "slowapi==0.1.9",
+  "loguru==0.7.2",
+  "PyJWT==2.9.0",
+  "groq==0.31.0",
+  "redis==6.4.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest==8.3.2",
+  "pytest-asyncio==0.23.8",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.hatch.build.targets.wheel]
 packages = ["app"]

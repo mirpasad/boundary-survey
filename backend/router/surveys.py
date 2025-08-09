@@ -2,17 +2,17 @@
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.orm import Session
-from app.schemas.generate import GenerateIn, SurveyOut
-from app.core.rate_limit import limiter
-from app.db.base import get_db
-from app.db.models import CachedSurvey
-from app.utils.hash import hash_prompt
-from app.services.llm import generate_with_llm
-from app.utils.validate import validate_string_length
+from schemas.generate import GenerateIn, SurveyOut
+from core.rate_limit import limiter
+from db.base import get_db
+from db.models import CachedSurvey
+from utils.hash import hash_prompt
+from services.llm import generate_with_llm
+from utils.validate import validate_string_length
 from loguru import logger
 import json
-from app.core.config import settings
-from app.core.redis import redis_client
+from core.config import settings
+from core.redis import redis_client
 
 router = APIRouter(prefix="/surveys")
 
@@ -62,9 +62,9 @@ async def generate(
         await redis_client.setex(
             redis_key,
             settings.REDIS_CACHE_TTL,
-            cached_survey.survey_data
+            cached_survey.payload
         )
-        return json.loads(cached_survey.survey_data)
+        return json.loads(cached_survey.payload)
 
    # Generate new survey with LLM
     try:
