@@ -35,7 +35,6 @@ Generate 4–8 useful questions. Options only for choice types. English.
         r = await client.post("https://api.openai.com/v1/responses", json=body, headers=headers)
         r.raise_for_status()
         data = r.json()
-        # responses API: output[0].content[0].text
         text = data.get("output", [{}])[0].get("content", [{}])[0].get("text", "")
         try:
             return json.loads(text)
