@@ -2,7 +2,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.orm import Session
 from app.schemas.generate import GenerateIn, SurveyOut
-from app.core.security import require_api_key
 from app.core.rate_limit import limiter
 from app.db.base import get_db
 from app.db.models import CachedSurvey
@@ -11,6 +10,7 @@ from app.services.llm import generate_with_llm
 from app.utils.validate import validate_payload
 from loguru import logger
 import json
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -20,12 +20,11 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     response_model_exclude_none=True,   
 )
-@limiter.limit("10/minute")
+@limiter.limit(settings.RATE_LIMIT)
 async def generate(
     body: GenerateIn,
     request: Request,
     response: Response,
-    _ = Depends(require_api_key),
     db: Session = Depends(get_db),
 ):
     h = hash_prompt(body.description)
