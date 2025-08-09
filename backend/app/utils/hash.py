@@ -1,4 +1,4 @@
-from hashlib import sha256
+import hashlib
 
-def hash_prompt(s: str) -> str:
-    return sha256(s.strip().encode("utf-8")).hexdigest()
+def hash_prompt(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()

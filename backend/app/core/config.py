@@ -9,8 +9,8 @@ class Settings(BaseModel):
     API_PREFIX: str = "/api"
     API_TOKEN: str = os.getenv("API_TOKEN", "dev-token-123")
 
-    OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
-    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL")
 
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
