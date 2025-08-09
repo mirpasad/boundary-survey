@@ -7,7 +7,7 @@ from app.db.base import get_db
 from app.db.models import CachedSurvey
 from app.utils.hash import hash_prompt
 from app.services.llm import generate_with_llm
-from app.utils.validate import validate_payload
+from app.utils.validate import validate_string_length
 from loguru import logger
 import json
 from app.core.config import settings
@@ -16,7 +16,6 @@ router = APIRouter(prefix="/surveys")
 
 @router.post(
     "/generate",
-    response_model=SurveyOut,
     status_code=status.HTTP_201_CREATED,
     response_model_exclude_none=True,   
 )
@@ -27,25 +26,59 @@ async def generate(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    # h = hash_prompt(body.description)
+   # 1. Validate input content
+    if not validate_string_length(body.description, min_length=5, max_length=2000):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Input contains restricted content"
+        )
 
-    # cached = db.query(CachedSurvey).filter(CachedSurvey.prompt_hash == h).first()
+    # # 2. Create hash key for caching
+    # prompt_hash = hash_prompt(body.description)
+    
+    # # 3. Check cache
+    # cached = db.query(CachedSurvey).filter(
+    #     CachedSurvey.prompt_hash == prompt_hash
+    # ).first()
+    
     # if cached:
-    #     logger.info("cache_hit prompt='{}'", body.description)
-    #     response.status_code = status.HTTP_200_OK
-    #     return json.loads(cached.payload)
+    #     logger.info("Returning cached survey")
+    #     return json.loads(cached.survey_data)
 
-    payload = await generate_with_llm(body.description)
+   # 4. Generate new survey with LLM
+    try:
+        survey = generate_with_llm(body.description)
+    except Exception as e:
+        logger.error(f"LLM generation failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Survey generation service unavailable"
+        )
+    
+    print("lol survey", survey)
 
-    for q in payload.get("questions", []):        
-        if q.get("type") not in {"multipleChoice", "singleChoice"}:
-            q.pop("options", None)
+    # # 5. Validate LLM output structure
+    # if not isinstance(survey, dict) or not survey.get("questions"):
+    #     logger.error("Invalid survey structure from LLM")
+    #     raise HTTPException(
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         detail="Invalid survey format generated"
+    #     )
+        
+    # # 6. Cache the new result
+    # try:
+    #     new_cache = CachedSurvey(
+    #         prompt_hash=prompt_hash,
+    #         survey_data=json.dumps(survey),
+    #         prompt=body.description[:500]  # Store first 500 chars for reference
+    #     )
+    #     db.add(new_cache)
+    #     db.commit()
+    # except Exception as e:
+    #     logger.warning(f"Caching failed: {str(e)}")
+    #     # Don't fail the request if caching fails
 
-    payload = validate_payload(payload)
-
-    db.add(CachedSurvey(prompt_hash=h, prompt=body.description, payload=json.dumps(payload)))
-    db.commit()
-    return payload
+    return survey
 
 @router.get("/test")
 def test():
