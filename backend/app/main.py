@@ -7,7 +7,7 @@ from starlette.responses import JSONResponse
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.core.rate_limit import limiter
-from app.api.router import routers
+from app.router import routers
 from app.utils.middleware import RequestIDMiddleware, JWTAuthMiddleware
 
 logger = setup_logging()

@@ -27,13 +27,13 @@ async def generate(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    h = hash_prompt(body.description)
+    # h = hash_prompt(body.description)
 
-    cached = db.query(CachedSurvey).filter(CachedSurvey.prompt_hash == h).first()
-    if cached:
-        logger.info("cache_hit prompt='{}'", body.description)
-        response.status_code = status.HTTP_200_OK
-        return json.loads(cached.payload)
+    # cached = db.query(CachedSurvey).filter(CachedSurvey.prompt_hash == h).first()
+    # if cached:
+    #     logger.info("cache_hit prompt='{}'", body.description)
+    #     response.status_code = status.HTTP_200_OK
+    #     return json.loads(cached.payload)
 
     payload = await generate_with_llm(body.description)
 
