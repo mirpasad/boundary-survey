@@ -1,4 +1,5 @@
 # app/api/routes.py
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.orm import Session
 from app.schemas.generate import GenerateIn, SurveyOut
@@ -11,6 +12,7 @@ from app.utils.validate import validate_string_length
 from loguru import logger
 import json
 from app.core.config import settings
+from app.core.redis import redis_client
 
 router = APIRouter(prefix="/surveys")
 
@@ -26,6 +28,7 @@ async def generate(
     response: Response,
     db: Session = Depends(get_db),
 ):
+    print("lol body", body)
    # 1. Validate input content
     if not validate_string_length(body.description, min_length=5, max_length=2000):
         raise HTTPException(
@@ -33,19 +36,37 @@ async def generate(
             detail="Input contains restricted content"
         )
 
-    # # 2. Create hash key for caching
-    # prompt_hash = hash_prompt(body.description)
+    # Create hash key for caching
+    prompt_hash = hash_prompt(body.description)
     
-    # # 3. Check cache
-    # cached = db.query(CachedSurvey).filter(
-    #     CachedSurvey.prompt_hash == prompt_hash
-    # ).first()
+    # 1. Check Redis cache first
+    redis_key = f"survey:{prompt_hash}"
+    cached_data = await redis_client.get(redis_key)
+    print("lol cached_data", cached_data)
     
-    # if cached:
-    #     logger.info("Returning cached survey")
-    #     return json.loads(cached.survey_data)
+    if cached_data:
+        logger.info(f"Redis cache hit: {redis_key}")
+        return json.loads(cached_data)
+    
+    # 2. Check database cache
+    cached_survey = db.query(CachedSurvey).filter(
+        CachedSurvey.prompt_hash == prompt_hash
+    ).first()
 
-   # 4. Generate new survey with LLM
+    print("lol cached_survey", cached_survey)
+
+    if cached_survey:
+        logger.info(f"Database cache hit: {prompt_hash}")
+        
+        # Store in Redis for faster future access
+        await redis_client.setex(
+            redis_key,
+            settings.REDIS_CACHE_TTL,
+            cached_survey.survey_data
+        )
+        return json.loads(cached_survey.survey_data)
+
+   # Generate new survey with LLM
     try:
         survey = generate_with_llm(body.description)
     except Exception as e:
@@ -57,29 +78,54 @@ async def generate(
     
     print("lol survey", survey)
 
-    # # 5. Validate LLM output structure
-    # if not isinstance(survey, dict) or not survey.get("questions"):
-    #     logger.error("Invalid survey structure from LLM")
-    #     raise HTTPException(
-    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #         detail="Invalid survey format generated"
-    #     )
+    # 5. Validate LLM output structure
+    if not isinstance(survey, dict) or not survey.get("questions"):
+        logger.error("Invalid survey structure from LLM")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Invalid survey format generated"
+        )
+    
+    survey_json = json.dumps(survey)
+    
+    # 4. Cache in Redis with TTL
+    try:
+        await redis_client.setex(
+            redis_key,
+            settings.REDIS_CACHE_TTL,
+            survey_json
+        )
+    except Exception as e:
+        logger.warning(f"Redis caching failed: {str(e)}")
         
-    # # 6. Cache the new result
-    # try:
-    #     new_cache = CachedSurvey(
-    #         prompt_hash=prompt_hash,
-    #         survey_data=json.dumps(survey),
-    #         prompt=body.description[:500]  # Store first 500 chars for reference
-    #     )
-    #     db.add(new_cache)
-    #     db.commit()
-    # except Exception as e:
-    #     logger.warning(f"Caching failed: {str(e)}")
-    #     # Don't fail the request if caching fails
-
+    # 5. Cache in database (async to avoid blocking)
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None, 
+            lambda: cache_in_db(prompt_hash, body.description, survey_json, db)
+        )
+    except Exception as e:
+        logger.warning(f"DB caching failed: {str(e)}")
+    
     return survey
 
 @router.get("/test")
 def test():
     return {"message": "Hello World!"}
+
+
+def cache_in_db(prompt_hash: str, description: str, survey_json: str, db: Session):
+    """Synchronous DB caching function for executor"""
+    try:
+        cache_entry = CachedSurvey(
+            prompt_hash=prompt_hash,
+            prompt=description,
+            payload=survey_json
+        )
+        db.add(cache_entry)
+        db.commit()
+        logger.info(f"Cached in DB: {prompt_hash}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"DB cache commit failed: {str(e)}")

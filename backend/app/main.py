@@ -9,6 +9,7 @@ from app.core.logging import setup_logging
 from app.core.rate_limit import limiter
 from app.router import routers
 from app.utils.middleware import RequestIDMiddleware, JWTAuthMiddleware
+from app.core.redis import redis_client
 
 logger = setup_logging()
 
@@ -32,6 +33,18 @@ app.add_middleware(SlowAPIMiddleware)
 for router in routers:
     app.include_router(router)
 
+
+@app.on_event("startup")
+async def startup_event():
+    await redis_client.connect()
+    logger.info("Redis connected")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if redis_client.client:
+        await redis_client.client.close()
+        logger.info("Redis disconnected")
+        
 @app.exception_handler(RateLimitExceeded)
 def ratelimit_handler(request, exc):
     return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
