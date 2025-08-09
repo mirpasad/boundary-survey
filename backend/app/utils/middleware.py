@@ -1,3 +1,4 @@
+import re
 import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
@@ -6,28 +7,30 @@ from starlette.responses import JSONResponse
 from starlette.requests import Request
 from typing import Iterable, Optional, Set
 from app.core.jwt import decode_jwt
+from .publicPaths import publicPaths
 from jwt import InvalidTokenError
 
+COMPILED_PATTERNS = [re.compile(pattern) for pattern in publicPaths]
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        rid = request.headers.get("x-request-id", str(uuid.uuid4()))
-        with logger.contextualize(request_id=rid):
+        reqId = request.headers.get("x-request-id", str(uuid.uuid4()))
+        with logger.contextualize(request_id=reqId):
             response: Response = await call_next(request)
-            response.headers["x-request-id"] = rid
+            response.headers["x-request-id"] = reqId
             return response
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):
     """Validates JWT on every request, except allow-listed paths and OPTIONS."""
 
-    def __init__(self, app, allow_paths: Optional[Iterable[str]] = None):
+    def __init__(self, app):
         super().__init__(app)
-        self.allow: Set[str] = set(allow_paths or [])
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
 
+        isAllowedPath = any(pattern.match(path) for pattern in COMPILED_PATTERNS)
         # Allow CORS preflight and selected public endpoints
-        if request.method == "OPTIONS" or path in self.allow:
+        if request.method == "OPTIONS" or isAllowedPath:
             return await call_next(request)
 
         auth = request.headers.get("authorization") or request.headers.get("Authorization")

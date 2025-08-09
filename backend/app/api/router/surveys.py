@@ -12,10 +12,10 @@ from loguru import logger
 import json
 from app.core.config import settings
 
-router = APIRouter()
+router = APIRouter(prefix="/surveys")
 
 @router.post(
-    "/surveys/generate",
+    "/generate",
     response_model=SurveyOut,
     status_code=status.HTTP_201_CREATED,
     response_model_exclude_none=True,   
@@ -46,3 +46,7 @@ async def generate(
     db.add(CachedSurvey(prompt_hash=h, prompt=body.description, payload=json.dumps(payload)))
     db.commit()
     return payload
+
+@router.get("/test")
+def test():
+    return {"message": "Hello World!"}

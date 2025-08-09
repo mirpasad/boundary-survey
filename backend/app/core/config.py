@@ -1,8 +1,8 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 from pydantic import BaseModel
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class Settings(BaseModel):
     ENV: str = os.getenv("ENV", "local")
@@ -23,6 +23,7 @@ class Settings(BaseModel):
      # JWT
     JWT_SECRET: str = os.getenv("JWT_SECRET")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM")
+    JWT_TTL_SECONDS: int = int(os.getenv("JWT_TTL_SECONDS"))
 
     DEV_LOGIN_EMAIL: str = os.getenv("DEV_LOGIN_EMAIL")
     DEV_LOGIN_PASSWORD: str = os.getenv("DEV_LOGIN_PASSWORD")
