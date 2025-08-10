@@ -31,7 +31,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 # Include all routers from the router package
 for router in routers:
-    app.include_router(router)
+    app.include_router(router, prefix=settings.API_PREFIX, tags=[router.tags])
 
 
 @app.on_event("startup")
