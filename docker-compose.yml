@@ -1,48 +1,48 @@
 services:
-  db:
-    image: postgres:16
-    restart: always
+  db: # PostgreSQL database service
+    image: postgres:16 # Use official Postgres 16 image
+    restart: always # Always restart container on failure
     environment:
-      POSTGRES_DB: surveys
-      POSTGRES_USER: survey
-      POSTGRES_PASSWORD: survey
-    ports: ["5432:5432"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U survey -d surveys"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
+      POSTGRES_DB: surveys # Database name
+      POSTGRES_USER: survey # Database user
+      POSTGRES_PASSWORD: survey # Database password
+    ports: ["5432:5432"] # Expose port 5432
+    healthcheck: # Healthcheck for Postgres service
+      test: ["CMD-SHELL", "pg_isready -U survey -d surveys"] # Check if DB is ready
+      interval: 3s # Healthcheck interval
+      timeout: 3s # Healthcheck timeout
+      retries: 20 # Healthcheck retries
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data # Persist database data
   
-  redis:
-    image: redis:latest
-    restart: always
+  redis: # Redis cache service
+    image: redis:latest # Use official Redis image
+    restart: always # Always restart container on failure
     ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
+      - "6379:6379" # Expose port 6379
+    healthcheck: # Healthcheck for Redis service
+      test: ["CMD", "redis-cli", "ping"] # Check if Redis is alive
+      interval: 3s # Healthcheck interval
+      timeout: 3s # Healthcheck timeout
+      retries: 20 # Healthcheck retries
     volumes:
-      - redis_data:/data
+      - redis_data:/data # Persist Redis data
 
-  backend:
+  backend: # Backend API service
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    env_file: .env
-    restart: always
+      context: ./backend # Build from backend directory
+      dockerfile: Dockerfile # Use Dockerfile in backend directory
+    env_file: .env # Load environment variables from .env file
+    restart: always # Always restart container on failure
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_healthy # Wait for db to be healthy
       redis:
-        condition: service_healthy
-    ports: ["8000:8000"]
+        condition: service_healthy # Wait for redis to be healthy
+    ports: ["8000:8000"] # Expose port 8000
     volumes:
-      - ./backend:/app
+      - ./backend:/app # Mount backend code for live reload
 
 volumes:
-  db_data:
-  redis_data:
+  db_data: # Volume for Postgres data
+  redis_data: # Volume for Redis data

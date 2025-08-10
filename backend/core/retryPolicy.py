@@ -6,7 +6,8 @@ from tenacity import (
 )
 import httpx
 
-# Configure retry policy
+# Defines a reusable retry policy for HTTP requests using Tenacity.
+# Retries up to 3 times with exponential backoff for common network and HTTP errors.
 RETRY_POLICY = retry(
     stop=stop_after_attempt(3),  # Max 3 attempts
     wait=wait_exponential(multiplier=1, min=1, max=10),  # Exponential backoff

@@ -5,6 +5,8 @@ from core.config import settings
 from fastapi.responses import JSONResponse
 from loguru import logger
 
+# Middleware that enforces a global timeout for all incoming requests.
+# If a request exceeds the configured timeout, a 504 Gateway Timeout error is returned.
 class TimeoutMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:

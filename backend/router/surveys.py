@@ -17,6 +17,8 @@ from core.redis import redis_client
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from starlette.responses import JSONResponse
 
+# Survey router handles endpoints for survey generation and caching.
+# Implements multi-layer caching (Redis, DB) and integrates with LLM service.
 router = APIRouter(prefix="/surveys")
 
 @router.post(
@@ -31,37 +33,32 @@ async def generate(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    print("lol body", body)
-   # 1. Validate input content
+    """
+    Generates a survey using LLM based on input description.
+    Checks Redis and DB cache before generating a new survey.
+    Caches results in both Redis and DB for future requests.
+    """
     if not validate_string_length(body.description, min_length=5, max_length=2000):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Input contains restricted content"
         )
 
-    # Create hash key for caching
     prompt_hash = hash_prompt(body.description)
-    
-    # 1. Check Redis cache first
     redis_key = f"survey:{prompt_hash}"
+
+    # Check Redis cache first
     cached_data = await redis_client.get(redis_key)
-    print("lol cached_data", cached_data)
-    
     if cached_data:
         logger.info(f"Redis cache hit: {redis_key}")
         return json.loads(cached_data)
     
-    # 2. Check database cache
+    # Check database cache
     cached_survey = db.query(CachedSurvey).filter(
         CachedSurvey.prompt_hash == prompt_hash
     ).first()
-
-    print("lol cached_survey", cached_survey)
-
     if cached_survey:
         logger.info(f"Database cache hit: {prompt_hash}")
-        
-        # Store in Redis for faster future access
         await redis_client.setex(
             redis_key,
             settings.REDIS_CACHE_TTL,
@@ -69,7 +66,7 @@ async def generate(
         )
         return json.loads(cached_survey.payload)
 
-   # Generate new survey with LLM
+    # Generate new survey with LLM
     try:
         survey = generate_with_llm(body.description)
     except Exception as e:
@@ -85,10 +82,8 @@ async def generate(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Survey generation service unavailable"
         )
-    
-    print("lol survey", survey)
 
-    # 5. Validate LLM output structure
+    # Validate LLM output structure
     if not isinstance(survey, dict) or not survey.get("questions"):
         logger.error("Invalid survey structure from LLM")
         raise HTTPException(
@@ -98,7 +93,7 @@ async def generate(
     
     survey_json = json.dumps(survey)
     
-    # 4. Cache in Redis with TTL
+    # Cache in Redis with TTL
     try:
         await redis_client.setex(
             redis_key,
@@ -108,7 +103,7 @@ async def generate(
     except Exception as e:
         logger.warning(f"Redis caching failed: {str(e)}")
         
-    # 5. Cache in database (async to avoid blocking)
+    # Cache in database (async to avoid blocking)
     try:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
@@ -122,8 +117,8 @@ async def generate(
 
 @router.get("/test")
 def test():
+    """Simple test endpoint for health checks."""
     return {"message": "Hello World!"}
-
 
 @retry(
     stop=stop_after_attempt(3),
@@ -131,7 +126,10 @@ def test():
     retry=retry_if_exception_type(sqlalchemy.exc.OperationalError)
 )
 def cache_in_db(prompt_hash: str, description: str, survey_json: str, db: Session):
-    """Synchronous DB caching function for executor"""
+    """
+    Synchronous DB caching function for executor.
+    Retries on operational errors to improve reliability.
+    """
     try:
         cache_entry = CachedSurvey(
             prompt_hash=prompt_hash,

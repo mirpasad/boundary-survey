@@ -2,6 +2,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, Text, String, DateTime, func
 from db.base import Base
 
+# Defines ORM models for database tables using SQLAlchemy.
+# CachedSurvey stores survey data and metadata for caching purposes.
+
 class CachedSurvey(Base):
     __tablename__ = "cached_surveys"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
