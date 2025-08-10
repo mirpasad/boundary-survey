@@ -15,6 +15,7 @@ import json
 from core.config import settings
 from core.redis import redis_client
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+from starlette.responses import JSONResponse
 
 router = APIRouter(prefix="/surveys")
 
@@ -73,6 +74,13 @@ async def generate(
         survey = generate_with_llm(body.description)
     except Exception as e:
         logger.error(f"LLM generation failed: {str(e)}")
+        return JSONResponse(
+            status_code=500,  # Internal Server Error
+            content={"error": {
+                "message": "LLM generation failed",
+                "code": "LLM_ERROR"
+            }}
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Survey generation service unavailable"
