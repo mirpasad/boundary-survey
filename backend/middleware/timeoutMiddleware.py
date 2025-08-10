@@ -4,6 +4,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_504_GATEWAY_TIMEOUT
 from core.config import settings
 
+# Middleware that enforces a global timeout for all incoming requests.
+# If a request exceeds the configured timeout, a 504 Gateway Timeout error is returned.
 class TimeoutMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:

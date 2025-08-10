@@ -4,6 +4,7 @@ import { PlusIcon2 } from "./Icons";
 import QuestionList from "./QuestionList";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { useAuthStore } from "../store/authStore";
 
 const CreateSurvey = () => {
   const {
@@ -22,6 +23,7 @@ const CreateSurvey = () => {
   const [titleError, setTitleError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const { token, fetchToken } = useAuthStore();
 
   const handleGenerate = async () => {
     if (isGenerating) return;
@@ -30,23 +32,44 @@ const CreateSurvey = () => {
 
     try {
       setIsGenerating(true);
+      
+      // Ensure we have a valid token
+      let authToken = token;
+      if (!authToken) {
+        authToken = await fetchToken();
+        if (!authToken) {
+          toast.error("Authentication required");
+          return;
+        }
+      }
+
       const res = await fetch("/api/surveys/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-API-KEY": "dev-token-123",
+          "Authorization": `Bearer ${authToken}`
         },
         body: JSON.stringify({ description }),
       });
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        
+        // Handle 401 specifically
+        if (res.status === 401) {
+          useAuthStore.getState().clearToken();
+          toast.error("Session expired. Please re-authenticate.");
+          return;
+        }
+        
         throw new Error(err.detail || `HTTP ${res.status}`);
       }
+      
       const json = await res.json();
       loadFromJSON(json);
-      toast.success("Survey generated");
+      toast.success("Survey generated successfully!");
     } catch (e) {
-      console.error(e);
+      console.error("Generation error:", e);
       toast.error(e.message || "Failed to generate survey");
     } finally {
       setIsGenerating(false);
@@ -124,10 +147,20 @@ const CreateSurvey = () => {
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className={`btn-square-style !bg-[#6851A7] !border-[#6851A7] ${isGenerating ? "opacity-70 cursor-not-allowed" : ""}`}
+              className={`btn-square-style !bg-[#6851A7] !border-[#6851A7] flex items-center justify-center ${
+                isGenerating ? "opacity-70 cursor-not-allowed" : ""
+              }`}
               aria-busy={isGenerating}
             >
-              {isGenerating ? "Generating..." : "Generate Survey (AI)"}
+              {isGenerating ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </>
+              ) : "Generate Survey (AI)"}
             </button>
           </div>
         </motion.div>

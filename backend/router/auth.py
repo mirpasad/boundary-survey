@@ -3,6 +3,8 @@ from pydantic import BaseModel, EmailStr
 from core.config import settings
 from core.jwt import create_jwt
 
+# API routes for authentication (login, token generation).
+# Provides endpoints for developer login and JWT token issuance.
 router = APIRouter(tags=["Auth"])
 
 class LoginIn(BaseModel):
@@ -16,7 +18,10 @@ class TokenOut(BaseModel):
 
 @router.post("/auth/token", response_model=TokenOut)
 def login(request: LoginIn) -> TokenOut:
-    # Simple dev login. Replace with real user store later.
+    """
+    Developer login endpoint. Validates credentials and returns a JWT token.
+    Replace with real user authentication in production.
+    """
     if not request.email or not request.password:
         raise HTTPException(status_code=400, detail="Missing headers")
     if request.email != settings.DEV_LOGIN_EMAIL or request.password != settings.DEV_LOGIN_PASSWORD:
@@ -28,3 +33,11 @@ def login(request: LoginIn) -> TokenOut:
         extra={"role": "developer"}  # add any custom claims you want
     )
     return TokenOut(access_token=token, expires_in=settings.JWT_TTL_SECONDS)
+
+@router.post("/auth/token")
+def generate_token():
+    """
+    Placeholder endpoint for token generation.
+    Extend this for other authentication flows as needed.
+    """
+    pass

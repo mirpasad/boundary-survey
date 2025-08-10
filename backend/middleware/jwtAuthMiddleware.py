@@ -8,6 +8,9 @@ from core.jwt import decode_jwt
 from utils.publicPaths import publicPaths
 from jwt import InvalidTokenError
 
+# Middleware for validating JWT tokens on incoming requests.
+# Skips validation for allow-listed public paths and CORS preflight requests.
+# Attaches user claims to request state for downstream usage.
 class JWTAuthMiddleware(BaseHTTPMiddleware):
     """Validates JWT on every request, except allow-listed paths and OPTIONS."""
 
@@ -40,7 +43,7 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
     def _unauthorized(self, request: Request, message: str) -> JSONResponse:
-        # Ensure every response has an x-request-id even if we short-circuit here.
+        # Returns a 401 response with a request ID for unauthorized access.
         rid = request.headers.get("x-request-id", str(uuid.uuid4()))
         resp = JSONResponse(status_code=401, content={"detail": message})
         resp.headers["x-request-id"] = rid

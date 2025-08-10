@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field
 from typing import Literal, List, Optional
 
+# Pydantic schema definitions for survey generation and output.
+# Used for request validation and response serialization in survey endpoints.
+
 QuestionType = Literal["multipleChoice","singleChoice","openQuestion","shortAnswer","scale","npsScore"]
 
 class Question(BaseModel):
