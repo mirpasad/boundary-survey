@@ -1,3 +1,4 @@
+from middleware.timeoutMiddleware import TimeoutMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -8,7 +9,8 @@ from core.config import settings
 from core.logging import setup_logging
 from core.rate_limit import limiter
 from router import routers
-from utils.middleware import RequestIDMiddleware, JWTAuthMiddleware
+from middleware.jwtAuthMiddleware import JWTAuthMiddleware
+from middleware.requestIDMiddleware import RequestIDMiddleware
 from core.redis import redis_client
 
 logger = setup_logging()
@@ -27,6 +29,7 @@ app.add_middleware(
     JWTAuthMiddleware,
 )
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(TimeoutMiddleware)
 app.add_middleware(SlowAPIMiddleware)
 
 # Include all routers from the router package
