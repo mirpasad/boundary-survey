@@ -1,6 +1,7 @@
 # app/api/routes.py
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+import sqlalchemy
 from sqlalchemy.orm import Session
 from schemas.generate import GenerateIn, SurveyOut
 from core.rate_limit import limiter
@@ -13,6 +14,7 @@ from loguru import logger
 import json
 from core.config import settings
 from core.redis import redis_client
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 
 router = APIRouter(prefix="/surveys")
 
@@ -72,7 +74,7 @@ async def generate(
     except Exception as e:
         logger.error(f"LLM generation failed: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Survey generation service unavailable"
         )
     
@@ -115,6 +117,11 @@ def test():
     return {"message": "Hello World!"}
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(0.5),
+    retry=retry_if_exception_type(sqlalchemy.exc.OperationalError)
+)
 def cache_in_db(prompt_hash: str, description: str, survey_json: str, db: Session):
     """Synchronous DB caching function for executor"""
     try:

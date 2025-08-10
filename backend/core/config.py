@@ -35,4 +35,6 @@ class Settings(BaseModel):
     # Cache strategy
     CACHE_STRATEGY: str = os.getenv("CACHE_STRATEGY", "redis_first")  # Options: "redis_first", "db_only", "redis_only"
 
+    GLOBAL_REQUEST_TIMEOUT: int = int(os.getenv("GLOBAL_REQUEST_TIMEOUT", 30))
+
 settings = Settings()
