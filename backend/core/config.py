@@ -6,8 +6,7 @@ from pydantic import BaseModel
 
 class Settings(BaseModel):
     ENV: str = os.getenv("ENV", "local")
-    API_PREFIX: str = "/api"
-    API_TOKEN: str = os.getenv("API_TOKEN", "dev-token-123")
+    API_PREFIX: str = os.getenv("API_PREFIX", "/api")
 
     GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY")
     GROQ_MODEL: str = os.getenv("GROQ_MODEL")

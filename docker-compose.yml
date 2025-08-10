@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    restart: always
     environment:
       POSTGRES_DB: surveys
       POSTGRES_USER: survey
@@ -16,6 +17,7 @@ services:
   
   redis:
     image: redis:latest
+    restart: always
     ports:
       - "6379:6379"
     healthcheck:
@@ -27,13 +29,19 @@ services:
       - redis_data:/data
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     env_file: .env
+    restart: always
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports: ["8000:8000"]
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
 
 volumes:
   db_data:
