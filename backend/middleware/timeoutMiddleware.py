@@ -1,8 +1,9 @@
 import asyncio
-from fastapi import Request, HTTPException
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.status import HTTP_504_GATEWAY_TIMEOUT
 from core.config import settings
+from fastapi.responses import JSONResponse
+from loguru import logger
 
 # Middleware that enforces a global timeout for all incoming requests.
 # If a request exceeds the configured timeout, a 504 Gateway Timeout error is returned.
@@ -14,7 +15,12 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
                 timeout=settings.GLOBAL_REQUEST_TIMEOUT
             )
         except asyncio.TimeoutError:
-            raise HTTPException(
-                status_code=HTTP_504_GATEWAY_TIMEOUT,
-                detail="Request processing time exceeded"
+            logger.error(f"Request timed out for {request.url.path}")
+            return JSONResponse(
+                status_code=504,  # Gateway Timeout
+                content={"error": {
+                    "message": "Request timed out", 
+                    "code": "TIMEOUT_ERROR"
+                    }
+                }
             )

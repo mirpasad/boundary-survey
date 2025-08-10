@@ -2,16 +2,26 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
 const api = axios.create({
+
   baseURL: process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000',
   timeout: 10000, // Request timeout in milliseconds
+
+  baseURL: process.env.GENERATE_SURVEY_URL,
+
 });
 
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+
     const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+
+    const authStore = useAuthStore();
+    if (authStore.token) {
+      config.headers.Authorization = `Bearer ${authStore.token}`;
+
     }
     return config;
   },
@@ -29,6 +39,7 @@ api.interceptors.response.use(
     // Handle token expiration (401 errors)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+
       const authStore = useAuthStore.getState();
       
       try {
@@ -40,6 +51,20 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         authStore.clearToken();
+
+      const authStore = useAuthStore();
+      
+      try {
+        await authStore.fetchToken();
+        
+        // Retry original request with new token
+        originalRequest.headers.Authorization = `Bearer ${authStore.token}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Redirect to login or handle failed refresh
+        authStore.clearToken();
+        window.location.href = '/login';
+
         return Promise.reject(refreshError);
       }
     }

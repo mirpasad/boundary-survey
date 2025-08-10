@@ -45,6 +45,13 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
     def _unauthorized(self, request: Request, message: str) -> JSONResponse:
         # Returns a 401 response with a request ID for unauthorized access.
         rid = request.headers.get("x-request-id", str(uuid.uuid4()))
-        resp = JSONResponse(status_code=401, content={"detail": message})
+        resp = JSONResponse(
+            status_code=401, 
+            content={"error": {
+                "message": "Unauthorized access", 
+                "code": "UNAUTHORIZED"
+                }
+            }
+        )
         resp.headers["x-request-id"] = rid
         return resp

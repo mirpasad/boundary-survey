@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
 export const getAuthToken = async () => {
@@ -10,11 +11,31 @@ export const getAuthToken = async () => {
     });
     
     if (response.data.access_token) {
+
+const API_URL = process.env.GENERATE_SURVEY_URL || 'http://localhost:8000/api/surveys/generate/';
+
+export const getAuthToken = async () => {
+  try {
+    console.log("lol API_URL:", API_URL);
+    const response = await axios.post(`${API_URL}`, {
+      email: "dev@test.com",
+      password: "devpass"
+    });
+    console.log("lol response:", response);
+    if (response.data.access_token) {
+        console.log("lol Fetched token:", response.data.access_token);
+
       return response.data.access_token;
     }
     throw new Error('No token received');
   } catch (error) {
+
     console.error('Token request failed:', error.response?.data || error.message);
     throw error;
+
+    console.error('Token request failed:', error);
+    // Implement fallback strategy here
+    return null;
+
   }
 };
