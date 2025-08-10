@@ -1,8 +1,8 @@
 publicPaths = [
-  r"^/health$",  # Exact match for /health
-    r"^/public/.*$",  # Allow all paths starting with /public/
-    r"^/$",  # Allow root path
-    r"^/docs$",  # Allow Swagger UI
-    r"^/openapi\.json$",  # Allow OpenAPI schema
-    r"^/auth/.*$",  # Allow all paths starting with /auth/
+  r"^/api/health$",  # Exact match for /health
+    r"^/api/public/.*$",  # Allow all paths starting with /public/
+    r"^/api/$",  # Allow root path
+    r"^/api/docs$",  # Allow Swagger UI
+    r"^/api/openapi\.json$",  # Allow OpenAPI schema
+    r"^/api/auth/.*$",  # Allow all paths starting with /auth/
 ]
