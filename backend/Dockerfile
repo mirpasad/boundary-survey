@@ -1,21 +1,21 @@
 # Use official Python 3.12 slim image for minimal footprint
 FROM python:3.12-slim
 
-# Prevent Python from writing .pyc files and enable unbuffered output
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Prevent .pyc files and enable unbuffered output
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
-# Set working directory inside the container
 WORKDIR /app
 
-# Copy application code to container
+# Install Python dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Copy application code
 COPY . /app
 
-# Copy project dependencies file for pip install
-COPY pyproject.toml /code/pyproject.toml
-
-# Install dependencies from pyproject.toml
-RUN pip install /code/.
+RUN chmod +x /app/entrypoint.sh
 
 # Expose backend API port
 EXPOSE 8000

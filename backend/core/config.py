@@ -15,7 +15,8 @@ class Settings(BaseModel):
 
     # LLM service configuration
     GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama3-70b-8192")
+    LLM_NETWORK_TIMEOUT: int = int(os.getenv("LLM_NETWORK_TIMEOUT", "15"))
 
     # Database connection string
     DATABASE_URL: str = os.getenv(
@@ -28,18 +29,18 @@ class Settings(BaseModel):
     CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")  
     
     # JWT authentication configuration
-    JWT_SECRET: str = os.getenv("JWT_SECRET")
-    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM")
-    JWT_TTL_SECONDS: int = int(os.getenv("JWT_TTL_SECONDS"))
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "dev-secret")  # safe default for local only
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_TTL_SECONDS: int = int(os.getenv("JWT_TTL_SECONDS", "3600"))
 
     # Developer login credentials (for development/testing only)
-    DEV_LOGIN_EMAIL: str = os.getenv("DEV_LOGIN_EMAIL")
-    DEV_LOGIN_PASSWORD: str = os.getenv("DEV_LOGIN_PASSWORD")
-    
+    DEV_LOGIN_EMAIL: str = os.getenv("DEV_LOGIN_EMAIL", "dev@test.com")
+    DEV_LOGIN_PASSWORD: str = os.getenv("DEV_LOGIN_PASSWORD", "devpass")
+
     # Redis cache configuration
-    REDIS_HOST: str = os.getenv("REDIS_HOST")
-    REDIS_PORT: int = int(os.getenv("REDIS_PORT"))
-    REDIS_CACHE_TTL: int = int(os.getenv("REDIS_CACHE_TTL"))
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_CACHE_TTL: int = int(os.getenv("REDIS_CACHE_TTL", "120"))
     
     # Cache strategy for data retrieval
     CACHE_STRATEGY: str = os.getenv("CACHE_STRATEGY", "redis_first")  # Options: "redis_first", "db_only", "redis_only"

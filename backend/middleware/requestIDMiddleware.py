@@ -10,5 +10,5 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         reqId = request.headers.get("x-request-id", str(uuid.uuid4()))
         with logger.contextualize(request_id=reqId):
             response: Response = await call_next(request)
-            response.headers["x-request-id"]
+            response.headers["x-request-id"] = reqId
             return response

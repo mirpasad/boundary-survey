@@ -1,4 +1,5 @@
 import os
+import asyncio
 import json
 from urllib import response
 from core.retryPolicy import RETRY_POLICY
@@ -10,103 +11,77 @@ import httpx
 # This module integrates with the Groq LLM API to generate surveys from user descriptions.
 # It applies a system prompt for survey design, validates output, and handles errors and retries.
 
-client = groq.Groq(api_key=settings.GROQ_API_KEY)
+groq_client = groq.Groq(api_key=settings.GROQ_API_KEY)
+
+# IMPORTANT: We align the LLM output to our Pydantic schema in schemas/generate.py.
+SYSTEM_PROMPT = """
+You are an expert survey designer.
+
+Return ONLY valid JSON (no markdown fences, no commentary) matching exactly this schema:
+
+{
+  "title": "string (survey title)",
+  "description": "string (optional, brief summary of the survey)",
+  "questions": [
+    {
+      "type": "multipleChoice" | "singleChoice" | "openQuestion" | "shortAnswer" | "scale" | "npsScore",
+      "title": "string (question text)",
+      "options": ["string", "..."]  // include only for choice-based questions; omit otherwise
+    }
+  ]
+}
+
+Rules:
+- Provide 5 to 8 questions, neutral and unbiased.
+- Use 'multipleChoice' when multiple answers make sense; 'singleChoice' when only one should be selected.
+- For 'scale', assume a 1–10 scale implicitly; do not add min/max fields.
+- For 'npsScore', use standard 0–10 intent but return only the question 'title' (no extra fields).
+- Do NOT include any fields other than the ones defined in the schema above.
+- Output MUST be a single JSON object.
+"""
+
+def _call_groq(description: str) -> dict:
+    resp = groq_client.chat.completions.create(
+        model=settings.GROQ_MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Survey description: {description}"}
+        ],
+        temperature=0.3,
+        max_tokens=1200,
+        response_format={"type": "json_object"},
+    )
+    content = resp.choices[0].message.content
+    return json.loads(content)
+
+def _validate_against_schema_like(data: dict) -> bool:
+    # Lightweight structural validation aligned to schemas/generate.py (Option A)
+    if not isinstance(data, dict): return False
+    if "title" not in data or "questions" not in data: return False
+    if not isinstance(data["questions"], list) or len(data["questions"]) == 0: return False
+
+    allowed_types = {"multipleChoice","singleChoice","openQuestion","shortAnswer","scale","npsScore"}
+    for q in data["questions"]:
+        if not isinstance(q, dict): return False
+        if "type" not in q or "title" not in q: return False
+        if q["type"] not in allowed_types: return False
+        if "options" in q and not isinstance(q["options"], list): return False
+    return True
 
 @RETRY_POLICY
 async def generate_with_llm(description: str) -> dict:
     """
-    Generate a structured survey from a description using an LLM.
-    Applies a system prompt and validates the output structure.
+    Calls Groq to generate a survey JSON matching our schemas.generate.SurveyOut contract.
+    Wrapped in a retry policy; executed in a thread to avoid blocking the event loop.
     """
-    async with httpx.AsyncClient(timeout=settings.LLM_NETWORK_TIMEOUT) as client:
-        SYSTEM_PROMPT = """
-        You are an expert survey designer. Create a comprehensive survey based on the user's description.
-        
-        Output Requirements:
-        1. Return valid JSON with this structure:
-            {
-                "title": "Survey Title",
-                "description": "Survey overview",
-                "questions": [
-                    {
-                        "type": "question_type",
-                        "question": "Question text",
-                        ...type-specific fields
-                    }
-                ]
-            }
-        
-        2. Question types and required fields:
-            - multiple_choice: {options: [list of choices], allow_multiple: bool}
-            - rating_scale: {min: 1, max: number(5/7/10), min_label: "Poor", max_label: "Excellent"}
-            - open_text: {multiline: bool}
-            - ranking: {items: [list to rank]}
-            - boolean: {}
-        
-        3. Guidelines:
-            - Include 5-8 questions covering all relevant aspects
-            - Mix question types appropriately
-            - Ensure questions are neutral and unbiased
-            - Add a title that summarizes the survey
-            - Include a brief description explaining the survey's purpose
-        """
-        USER_PROMPT = f"Survey description: {description}"
-
-        try:
-            # Call the LLM API and handle response
-            response = client.chat.completions.create(
-                model=settings.GROQ_MODEL,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": USER_PROMPT}
-                ],
-                temperature=0.3,
-                max_tokens=1200,
-                response_format={"type": "json_object"}
-            )
-            # Handle rate limit and server errors
-            if response.status_code == 429:
-                logger.warning("Rate limited by Groq API")
-                raise httpx.HTTPStatusError("Rate limited", request=response.request, response=response)
-            elif response.status_code >= 500:
-                logger.error(f"Groq server error: {response.status_code}")
-                raise httpx.HTTPStatusError("Server error", request=response.request, response=response)
-
-            # Parse and validate JSON response
-            json_str = response.choices[0].message.content
-            survey_data = json.loads(json_str)
-            if validate_survey_structure(survey_data):
-                return survey_data
-            else:
-                logger.error(f"LLM returned invalid structure: {json_str}")
-                raise ValueError("Invalid LLM response structure")
-
-        except Exception as e:
-            logger.error(f"LLM call failed: {str(e)}")
-            raise e
-
-def validate_survey_structure(data: dict) -> bool:
-    """
-    Validate LLM output matches SurveyOut schema.
-    Checks required fields and type-specific question structure.
-    """
-    required_keys = {"title", "questions"}
-    question_required = {"type", "question"}
-    type_specific = {
-        "multiple_choice": {"options"},
-        "rating_scale": {"min", "max"},
-        "open_text": set(),
-        "ranking": {"items"},
-        "boolean": set()
-    }
-    if not all(key in data for key in required_keys):
-        return False
-    for q in data.get("questions", []):
-        if not all(k in q for k in question_required):
-            return False
-        q_type = q["type"]
-        if q_type not in type_specific:
-            return False
-        if not all(k in q for k in type_specific[q_type]):
-            return False
-    return True
+    loop = asyncio.get_event_loop()
+    try:
+        # Run the (blocking) SDK call in a thread, with a soft timeout at the request layer.
+        data = await loop.run_in_executor(None, lambda: _call_groq(description))
+        if not _validate_against_schema_like(data):
+            logger.error(f"LLM returned invalid structure: {data}")
+            raise ValueError("Invalid LLM response structure")
+        return data
+    except Exception as e:
+        logger.error(f"LLM call failed: {e}")
+        raise

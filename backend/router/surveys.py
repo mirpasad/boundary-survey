@@ -1,8 +1,12 @@
-# app/api/routes.py
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+import json
 import sqlalchemy
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from starlette.responses import JSONResponse
 from sqlalchemy.orm import Session
+from loguru import logger
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+
 from schemas.generate import GenerateIn, SurveyOut
 from core.rate_limit import limiter
 from db.base import get_db
@@ -10,21 +14,16 @@ from db.models import CachedSurvey
 from utils.hash import hash_prompt
 from services.llm import generate_with_llm
 from utils.validate import validate_string_length
-from loguru import logger
-import json
 from core.config import settings
 from core.redis import redis_client
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
-from starlette.responses import JSONResponse
 
-# Survey router handles endpoints for survey generation and caching.
-# Implements multi-layer caching (Redis, DB) and integrates with LLM service.
 router = APIRouter(prefix="/surveys")
 
 @router.post(
     "/generate",
     status_code=status.HTTP_201_CREATED,
-    response_model_exclude_none=True,   
+    response_model=SurveyOut,
+    response_model_exclude_none=True,
 )
 @limiter.limit(settings.RATE_LIMIT)
 async def generate(
@@ -41,59 +40,67 @@ async def generate(
     if not validate_string_length(body.description, min_length=5, max_length=2000):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Input contains restricted content"
+            detail="Input contains restricted content",
         )
 
     prompt_hash = hash_prompt(body.description)
     redis_key = f"survey:{prompt_hash}"
 
-    # Check Redis cache first
-    cached_data = await redis_client.get(redis_key)
-    if cached_data:
-        logger.info(f"Redis cache hit: {redis_key}")
-        return json.loads(cached_data)
-    
-    # Check database cache
-    cached_survey = db.query(CachedSurvey).filter(
-        CachedSurvey.prompt_hash == prompt_hash
-    ).first()
-    if cached_survey:
-        logger.info(f"Database cache hit: {prompt_hash}")
-        await redis_client.setex(
-            redis_key,
-            settings.REDIS_CACHE_TTL,
-            cached_survey.payload
-        )
-        return json.loads(cached_survey.payload)
-
-    # Generate new survey with LLM
+    # 1) Redis cache
     try:
-        survey = generate_with_llm(body.description)
+        cached_data = await redis_client.get(redis_key)
+        if cached_data:
+            logger.info(f"Redis cache hit: {redis_key}")
+            # decode bytes -> str -> dict
+            return json.loads(cached_data.decode("utf-8"))
+    except Exception as e:
+        logger.warning(f"Redis get failed: {e}")
+
+    # 2) DB cache (non-blocking read via executor)
+    loop = asyncio.get_event_loop()
+    try:
+        cached_survey = await loop.run_in_executor(
+            None,
+            lambda: db.query(CachedSurvey)
+                      .filter(CachedSurvey.prompt_hash == prompt_hash)
+                      .first()
+        )
+        if cached_survey:
+            logger.info(f"Database cache hit: {prompt_hash}")
+            # Re-prime Redis (best-effort)
+            try:
+                await redis_client.setex(
+                    redis_key,
+                    settings.REDIS_CACHE_TTL,
+                    cached_survey.payload
+                )
+            except Exception as e:
+                logger.warning(f"Redis re-prime failed: {e}")
+            return json.loads(cached_survey.payload)
+    except Exception as e:
+        logger.warning(f"DB read failed: {e}")
+
+    # 3) Generate new survey with LLM
+    try:
+        survey = await generate_with_llm(body.description)  # FIX: await
     except Exception as e:
         logger.error(f"LLM generation failed: {str(e)}")
         return JSONResponse(
-            status_code=500,  # Internal Server Error
-            content={"error": {
-                "message": "LLM generation failed",
-                "code": "LLM_ERROR"
-            }}
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Survey generation service unavailable"
+            status_code=500,
+            content={"error": {"message": "LLM generation failed", "code": "LLM_ERROR"}},
         )
 
-    # Validate LLM output structure
+    # Basic shape validation (SurveyOut enforces further)
     if not isinstance(survey, dict) or not survey.get("questions"):
         logger.error("Invalid survey structure from LLM")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Invalid survey format generated"
+            detail="Invalid survey format generated",
         )
-    
+
     survey_json = json.dumps(survey)
-    
-    # Cache in Redis with TTL
+
+    # 4) Cache in Redis with TTL (best-effort)
     try:
         await redis_client.setex(
             redis_key,
@@ -102,17 +109,15 @@ async def generate(
         )
     except Exception as e:
         logger.warning(f"Redis caching failed: {str(e)}")
-        
-    # Cache in database (async to avoid blocking)
+
+    # 5) Cache in DB (non-blocking, with retries)
     try:
-        loop = asyncio.get_event_loop()
         await loop.run_in_executor(
-            None, 
-            lambda: cache_in_db(prompt_hash, body.description, survey_json, db)
+            None, lambda: cache_in_db(prompt_hash, body.description, survey_json, db)
         )
     except Exception as e:
         logger.warning(f"DB caching failed: {str(e)}")
-    
+
     return survey
 
 @router.get("/test")
@@ -123,7 +128,7 @@ def test():
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_fixed(0.5),
-    retry=retry_if_exception_type(sqlalchemy.exc.OperationalError)
+    retry=retry_if_exception_type(sqlalchemy.exc.OperationalError),
 )
 def cache_in_db(prompt_hash: str, description: str, survey_json: str, db: Session):
     """
