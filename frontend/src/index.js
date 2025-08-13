@@ -1,39 +1,21 @@
+// src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
 import './index.css';
-import { useAuthStore } from './store/authStore';
+import App from './App';
+import { useAuthStore } from './authStore';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-const initApp = async () => {
+(async function init() {
   try {
-    // Try to fetch token if we don't have one
-    if (!useAuthStore.getState().token) {
-      await useAuthStore.getState().fetchToken();
+    const { token, fetchToken } = useAuthStore.getState();
+    if (!token) {
+      await fetchToken();
     }
   } catch (e) {
-    console.error('Initial auth failed:', e);
+    console.error('Failed to prefetch token:', e);
+  } finally {
+    root.render(<App />);
   }
-
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import "./index.css"; // Optional if you use Tailwind or global styles
-import { useAuthStore } from './store/authStore';
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-const initApp = async () => {
-  await useAuthStore.getState().fetchToken();
-
-  
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-};
-
-
-initApp();
-
+})();

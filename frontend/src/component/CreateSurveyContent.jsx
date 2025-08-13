@@ -1,66 +1,53 @@
-import React, { useState } from "react";
-import { SixDotIcon } from "./Icons";
-import { sidebarcontent } from "./helper";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { useCreateSurveyProvider } from "./CreateSurveyProvider";
+import React from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useCreateSurvey } from './CreateSurveyProvider';
 
-const CreateSurveyContent = () => {
-  const { questions, onDragEnd } = useCreateSurveyProvider();
-  const [surveyContent, setSurveyContent] = useState(sidebarcontent);
+export default function CreateSurveyContent() {
+  const { questions, onDragEnd, surveyTitle } = useCreateSurvey();
+
+  const scrollTo = (qid) => {
+    const el = document.getElementById(`q-${qid}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
-    <div className="rounded-[20px] border-2 border-light-gray bg-white mt-3 flex flex-col  h-full sm:h-[calc(100vh-338px)] ">
-      <div className="grow">
-        <h3 className="auth-sub-heading text-primary font-medium border-b-2 border-light-gray p-3 w-full text-base ">
-         Survey Questions
-        </h3>
-      </div>
-      <div className="overflow-auto h-full scrollbar-style min-h-[84px] max-h-[200px]  sm:max-h-full">
-        <div className="flex flex-col px-4 pb-4 ">
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="droppableId">
-              {(provided, snapshot) => (
-                <div
-                  style={{
-                    backgroundColor: snapshot.isDragging
-                      ? "lightblue"
-                      : "white",
-                  }}
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                >
-                  {questions.map((list, index) => (
-                    <Draggable
-                      key={index}
-                      draggableId={index.toString()}
-                      index={index}
-                    >
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          key={index}
-                          className="flex justify-between items-center border-b border-lightlavender py-3 "
-                        >
-                          <p className="text-sm font-switzer text-primary whitespace-nowrap text-ellipsis overflow-hidden max-w-[240px]">
-                            {list.title}
-                          </p>
-                          <span>
-                            <SixDotIcon />
-                          </span>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+    <div className="p-3">
+      {/* NEW: show survey title card */}
+      <div className="px-3 py-2 rounded bg-white border mb-2">
+        <div className="text-sm font-semibold truncate" title={surveyTitle || 'Untitled Survey'}>
+          {surveyTitle || 'Untitled Survey'}
         </div>
+        <div className="text-xs text-slate-500">overview</div>
       </div>
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="sidebarList" direction="vertical">
+          {(provided) => (
+            <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
+              {questions.map((q, index) => (
+                <Draggable key={`s-${q.id}`} draggableId={`s-${q.id}`} index={index}>
+                  {(providedDraggable) => (
+                    <div
+                      ref={providedDraggable.innerRef}
+                      {...providedDraggable.draggableProps}
+                      {...providedDraggable.dragHandleProps}
+                      className="px-3 py-2 rounded bg-white border cursor-pointer"
+                      onClick={() => scrollTo(q.id)}   // NEW: clickable to jump
+                      title={q.title || `Question ${index + 1}`}
+                    >
+                      <div className="text-sm font-medium line-clamp-1">
+                        {q.title || `Question ${index + 1}`}
+                      </div>
+                      <div className="text-xs text-slate-500">{q.type}</div>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
     </div>
   );
-};
-
-export default CreateSurveyContent;
+}
