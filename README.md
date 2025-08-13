@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements an AI-powered survey generator backend that transforms user descriptions into structured surveys. The system integrates with a React frontend to provide a seamless survey creation experience. The backend uses FastAPI, PostgreSQL, Redis, and the Groq API to deliver a robust, production-ready solution.
+This project implements an AI-powered survey generator backend that transforms user descriptions into structured surveys. The system integrates with a React frontend to provide a seamless survey creation experience. The backend uses FastAPI, PostgreSQL, Redis, and Groq API for AI-powered survey generation, and a React frontend for a smooth, responsive UI.
 
 Key features:
 - 🧠 AI-powered survey generation using LLMs
@@ -14,12 +14,15 @@ Key features:
 
 ## Tech Stack
 
-### Core Components
+###  Backend Core Components
 - **Framework**: FastAPI (Python 3.11)
 - **Database**: PostgreSQL 16
 - **Caching**: Redis
 - **AI Integration**: Groq API (LLaMA3-70b model)
 - **Authentication**: JWT
+- **Rate Limiting**: SlowAPI
+- **Logging**: Loguru
+- **Retries**: Tenacity
 
 ### Key Libraries
 - SQLAlchemy (ORM)
@@ -30,7 +33,13 @@ Key features:
 - SlowAPI (Rate limiting)
 - Groq (LLM integration)
 
-## Features
+###  Frontend Core Components
+- **Framework**: React 18
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand + Context Provider
+- **HTTP Client**: Axios
+
+## Backend Features
 
 ### Survey Generation
 - Transforms natural language descriptions into structured surveys
@@ -67,6 +76,25 @@ Key features:
 - Connection pooling
 - Minimal cold-start overhead
 - Efficient prompt handling
+
+### Frontend Features
+- **Survey Creation & AI Integration**
+- Generate Survey button triggers AI survey creation.
+- User can enter only the title or title + description (description is optional).
+- Dropdown mode selector beside Generate button (aligned in one row).
+- Backend integration with Axios client, token auto-injection.
+
+- **Interactive Survey Answering**
+- Respond mode allows selecting answers for all question types.
+- Scale questions show numeric labels (1–10).
+- Cannot submit unless all questions are answered.
+- Edit mode retains all options visible for multiple/single-choice questions.
+- Edit button expands into duplicate/delete actions.
+
+- **Sidebar Navigation**
+- Left sidebar lists survey title + questions as an outline.
+- Click “Create New Survey” to reset state and start fresh.
+- Click question outline items to scroll to that question.
 
 ## Getting Started
 
@@ -240,6 +268,7 @@ backend/
 ├── pyproject.toml
 ├── requirements.txt
 └── .env.example
+
 ```
 
 ## Deployment
@@ -374,3 +403,13 @@ docker-compose logs -f backend
 - FastAPI for the excellent web framework
 - PostgreSQL and Redis for reliable data storage
 - Boundary AI for the challenging task
+
+## Future Improvements
+
+- Cache token generation results
+- Store payload as JSON in DB instead of string
+- Semantic matching for similar survey prompts
+- Alembic migrations
+- Unit & integration tests
+- Voice input for prompts
+- Auto-generate trending surveys from real-world data
