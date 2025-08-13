@@ -1,193 +1,140 @@
-import { useCreateSurveyProvider } from "./CreateSurveyProvider";
-import React, { useEffect, useState } from "react";
-import { PlusIcon2 } from "./Icons";
-import QuestionList from "./QuestionList";
-import { motion } from "framer-motion";
-import toast from "react-hot-toast";
-import { useAuthStore } from "../store/authStore";
+import React, { useState } from 'react';
+import { useAuthStore } from '../authStore';
+import api from '../axios';
+import { useCreateSurvey } from './CreateSurveyProvider';
+import QuestionList from './QuestionList';
 
-const CreateSurvey = () => {
+export default function CreateSurvey() {
+  const { token, fetchToken, clearToken } = useAuthStore();
   const {
-    questions,
-    defaultQuestionType,
-    setSurveyTitle,
-    setSurveyDescription,
-    surveyTitle,
-    surveyDescription,
-    addNewQuestion,
-    loadFromJSON,
-  } = useCreateSurveyProvider();
+    // bind to provider state so sidebars update
+    surveyTitle, setSurveyTitle,
+    surveyDescription, setSurveyDescription,
 
-  const [titleLength, setTitleLength] = useState(0);
-  const [descriptionLength, setDescriptionLength] = useState(0);
-  const [titleError, setTitleError] = useState("");
-  const [descriptionError, setDescriptionError] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const { token, fetchToken } = useAuthStore();
+    loadFromJSON, addNewQuestion,
+    mode, setMode, isComplete, responses, resetAnswers,
+  } = useCreateSurvey();
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [defaultType, setDefaultType] = useState('singleChoice');
 
   const handleGenerate = async () => {
-    if (isGenerating) return;
-    const description = window.prompt("Describe your survey:");
-    if (!description) return;
+    const description = (surveyDescription || surveyTitle || '').trim();
+    if (description.length < 5) {
+      alert('Please enter at least 5 characters in the Title or Description before generating.');
+      return;
+    }
 
     try {
-      setIsGenerating(true);
-      
-      // Ensure we have a valid token
-      let authToken = token;
-      if (!authToken) {
-        authToken = await fetchToken();
-        if (!authToken) {
-          toast.error("Authentication required");
-          return;
-        }
+      setIsLoading(true);
+      if (!token) await fetchToken();
+      const res = await api.post('/api/surveys/generate', { description });
+      loadFromJSON(res.data);
+    } catch (err) {
+      console.error('Generate failed:', err);
+      if (err?.response?.status === 401) {
+        clearToken();
+        alert('Session expired. Please try again.');
+      } else {
+        alert('Failed to generate survey. Please try again.');
       }
-
-      const res = await fetch("/api/surveys/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ description }),
-      });
-      
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        
-        // Handle 401 specifically
-        if (res.status === 401) {
-          useAuthStore.getState().clearToken();
-          toast.error("Session expired. Please re-authenticate.");
-          return;
-        }
-        
-        throw new Error(err.detail || `HTTP ${res.status}`);
-      }
-      
-      const json = await res.json();
-      loadFromJSON(json);
-      toast.success("Survey generated successfully!");
-    } catch (e) {
-      console.error("Generation error:", e);
-      toast.error(e.message || "Failed to generate survey");
     } finally {
-      setIsGenerating(false);
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    setTitleLength(surveyTitle?.length || 0);
-    setDescriptionLength(surveyDescription?.length || 0);
-  }, [surveyTitle, surveyDescription]);
+  const handleSubmitResponses = () => {
+    if (!isComplete()) {
+      alert('Please answer all questions before submitting.');
+      return;
+    }
+    console.log('SUBMIT RESPONSES', responses);
+    alert('Responses captured (see console). Wire this to a POST endpoint next.');
+  };
 
   return (
-    <div className="flex h-full font-switzer lg:overflow-auto scrollbar-style flex-col gap-4 sm:gap-6 sm:p-4">
-      <div className="flex flex-col space-y-6">
-        {/* Title Input */}
-        <motion.div
-          whileHover={{ boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)" }}
-          className="rounded-[12px] shadow-sm w-full border border-[#00000020] bg-white flex flex-col transition-all duration-300"
-        >
-          <motion.input
-            type="text"
-            maxLength={500}
-            name="title"
-            value={surveyTitle}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSurveyTitle(value);
-              setTitleLength(value.length);
-              setTitleError(
-                value.length >= 500 ? "Title cannot exceed 500 characters." : ""
-              );
-            }}
-            placeholder="Enter survey title"
-            className="text-[16px] px-5 pt-4 pb-1 text-primary outline-none border-none bg-transparent rounded-t-[12px] transition-all duration-200"
-          />
-          <div className="px-5 pb-3 text-right">
-            <p className={`text-[10px] ${titleLength > 450 ? "text-amber-500" : "text-gray-400"}`}>
-              {titleLength}/500
-            </p>
-            {titleError && <p className="text-red-500 text-sm">{titleError}</p>}
-          </div>
-        </motion.div>
-
-        {/* Description Input + Generate */}
-        <motion.div
-          whileHover={{ boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)" }}
-          className="rounded-[12px] shadow-sm w-full border border-[#00000020] bg-white flex flex-col transition-all duration-300"
-        >
-          <motion.input
-            type="text"
-            placeholder="Enter survey description"
-            maxLength={100}
-            name="description"
-            value={surveyDescription}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSurveyDescription(value);
-              setDescriptionLength(value.length);
-              setDescriptionError(
-                value.length >= 100 ? "Description cannot exceed 100 characters." : ""
-              );
-            }}
-            className="text-[16px] px-5 pt-4 pb-1 text-primary outline-none border-none bg-transparent rounded-t-[12px] transition-all duration-200"
-          />
-          <div className="px-5 pb-3 text-right">
-            <p className={`text-[10px] ${descriptionLength > 90 ? "text-amber-500" : "text-gray-400"}`}>
-              {descriptionLength}/100
-            </p>
-            {descriptionError && (
-              <p className="text-red-500 text-xs">{descriptionError}</p>
-            )}
-          </div>
-
-          <div className="px-5 pb-4">
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className={`btn-square-style !bg-[#6851A7] !border-[#6851A7] flex items-center justify-center ${
-                isGenerating ? "opacity-70 cursor-not-allowed" : ""
-              }`}
-              aria-busy={isGenerating}
-            >
-              {isGenerating ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Generating...
-                </>
-              ) : "Generate Survey (AI)"}
-            </button>
-          </div>
-        </motion.div>
+    <div className="p-6 space-y-6">
+      {/* Form header bound to provider */}
+      <div className="space-y-3">
+        <input
+          type="text"
+          className="w-full border rounded px-3 py-2"
+          placeholder="Survey title (used if description is empty)"
+          value={surveyTitle}
+          onChange={(e) => setSurveyTitle(e.target.value)}
+          maxLength={120}
+        />
+        <textarea
+          className="w-full border rounded px-3 py-2"
+          placeholder="Survey description (optional)"
+          value={surveyDescription}
+          onChange={(e) => setSurveyDescription(e.target.value)}
+          maxLength={500}
+          rows={3}
+        />
       </div>
 
-      {/* Question List */}
-      <div className="flex-1">
-        <QuestionList questions={questions} />
+      {/* Controls row — one line */}
+      <div className="flex items-center gap-3 flex-nowrap">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-600 whitespace-nowrap">
+            Default type for “Add Question”
+          </label>
+          <select
+            className="border rounded px-2 py-2 text-sm"
+            value={defaultType}
+            onChange={(e) => setDefaultType(e.target.value)}
+          >
+            <option value="singleChoice">Single choice</option>
+            <option value="multipleChoice">Multiple choice</option>
+            <option value="openQuestion">Open question</option>
+            <option value="shortAnswer">Short answer</option>
+            <option value="scale">Scale (1–10)</option>
+            <option value="npsScore">NPS (0–10)</option>
+          </select>
+        </div>
+
+        <button
+          className="px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-50"
+          onClick={handleGenerate}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Generating…' : 'Generate Survey (AI)'}
+        </button>
+
+        <button
+          className="px-4 py-2 rounded bg-slate-200"
+          onClick={() => addNewQuestion(defaultType)}
+        >
+          Add Question
+        </button>
+
+        {/* Mode selector on same row */}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm text-slate-600">Mode:</span>
+          <select
+            className="border rounded px-2 py-2 text-sm"
+            value={mode}
+            onChange={(e) => { resetAnswers(); setMode(e.target.value); }}
+          >
+            <option value="edit">Edit</option>
+            <option value="respond">Respond</option>
+          </select>
+        </div>
       </div>
 
-      {/* Add Question Button */}
-      <motion.div
-        whileHover={{ scale: 1.01, borderColor: "#6851a7" }}
-        className="border-2 py-4 md:py-5 lg:py-6 rounded-[12px] flex justify-center border-dotted border-[#6851a7] bg-[#6851a7]/5 transition-all duration-300"
-      >
-        <motion.button
-          whileHover={{ scale: 1.05, boxShadow: "0 6px 20px rgba(108, 93, 211, 0.3)" }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => addNewQuestion(defaultQuestionType)}
-          className="bg-[#6851a7] flex gap-2 items-center text-white py-3 px-6 rounded-full shadow-sm transition-all duration-300"
-        >
-          <PlusIcon2 className="h-4 w-4" />
-          <span className="font-medium text-base">Add Question</span>
-        </motion.button>
-      </motion.div>
+      <QuestionList />
+
+      {mode === 'respond' && (
+        <div className="pt-2">
+          <button
+            className="px-4 py-2 rounded bg-emerald-600 text-white"
+            onClick={handleSubmitResponses}
+          >
+            Submit responses
+          </button>
+        </div>
+      )}
     </div>
   );
-};
-
-export default CreateSurvey;
+}
