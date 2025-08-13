@@ -33,11 +33,3 @@ def login(request: LoginIn) -> TokenOut:
         extra={"role": "developer"}  # add any custom claims you want
     )
     return TokenOut(access_token=token, expires_in=settings.JWT_TTL_SECONDS)
-
-@router.post("/auth/token")
-def generate_token():
-    """
-    Placeholder endpoint for token generation.
-    Extend this for other authentication flows as needed.
-    """
-    pass

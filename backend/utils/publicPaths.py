@@ -2,10 +2,10 @@
 # Requests matching these paths bypass authentication middleware.
 
 publicPaths = [
-    r"^/api/health$",         # Exact match for /health
-    r"^/api/public/.*$",      # Allow all paths starting with /public/
-    r"^/api/$",               # Allow root path
-    r"^/api/docs$",           # Allow Swagger UI
-    r"^/api/openapi\.json$",  # Allow OpenAPI schema
-    r"^/api/auth/.*$",        # Allow all paths starting with /auth/
+    r"^/api/health$",          # health
+    r"^/api/public/.*$",       # any /api/public/*
+    r"^/api/?$",               # /api or /api/
+    r"^/docs$",                # FastAPI docs
+    r"^/openapi\.json$",       # OpenAPI schema
+    r"^/api/auth/.*$",         # auth endpoints
 ]

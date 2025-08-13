@@ -24,10 +24,7 @@ app.state.limiter = limiter
 origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -38,7 +35,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 # Include all routers from the router package for modular API endpoints.
 for router in routers:
-    app.include_router(router, prefix=settings.API_PREFIX, tags=[router.tags])
+    app.include_router(router, prefix=settings.API_PREFIX)
 
 @app.on_event("startup")
 async def startup_event():
