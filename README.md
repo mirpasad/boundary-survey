@@ -78,20 +78,21 @@ Key features:
 - Efficient prompt handling
 
 ### Frontend Features
-- **Survey Creation & AI Integration**
+
+### Survey Creation & AI Integration**
 - Generate Survey button triggers AI survey creation.
 - User can enter only the title or title + description (description is optional).
 - Dropdown mode selector beside Generate button (aligned in one row).
 - Backend integration with Axios client, token auto-injection.
 
-- **Interactive Survey Answering**
+### Interactive Survey Answering**
 - Respond mode allows selecting answers for all question types.
 - Scale questions show numeric labels (1–10).
 - Cannot submit unless all questions are answered.
 - Edit mode retains all options visible for multiple/single-choice questions.
 - Edit button expands into duplicate/delete actions.
 
-- **Sidebar Navigation**
+### Sidebar Navigation**
 - Left sidebar lists survey title + questions as an outline.
 - Click “Create New Survey” to reset state and start fresh.
 - Click question outline items to scroll to that question.
@@ -232,42 +233,89 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ```
 backend/
-├──--
-│   |
-│   │--router
-│   │   │   ├── auth.py
-│   │   │   └── surveys.py
-│   │   └── __init__.py
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── jwt.py
-│   │   ├── logging.py
-│   │   ├── rate_limit.py
-│   │   ├── redis.py
-│   │   └── retryPolicy.py
-│   ├── db/
-│   │   ├── base.py
-│   │   └── models.py
-│   ├── middleware/
-│   │   ├── jwtAuthMiddleware.py
-│   │   ├── requestIDMiddleware.py
-│   │   └── timeoutMiddleware.py
-│   ├── schemas/
-│   │   ├── generate.py
-│   │   └── __init__.py
-│   ├── services/
-│   │   └── llm.py
-│   ├── utils/
-│   │   ├── hash.py
-│   │   ├── publicPaths.py
-│   │   └── validate.py
-│   └── main.py
+│
+├── router/
+│   ├── auth.py
+│   └── surveys.py
+│   └── __init__.py
+│
+├── core/
+│   ├── config.py
+│   ├── jwt.py
+│   ├── logging.py
+│   ├── rate_limit.py
+│   ├── redis.py
+│   └── retryPolicy.py
+│
+├── db/
+│   ├── base.py
+│   └── models.py
+│
+├── middleware/
+│   ├── jwtAuthMiddleware.py
+│   ├── requestIDMiddleware.py
+│   └── timeoutMiddleware.py
+│
+├── schemas/
+│   ├── generate.py
+│   └── __init__.py
+│
+├── services/
+│   └── llm.py
+│
+├── utils/
+│   ├── hash.py
+│   ├── publicPaths.py
+│   └── validate.py
+│
+├── main.py
 ├── Dockerfile
 ├── docker-compose.yml
 ├── entrypoint.sh
 ├── pyproject.toml
 ├── requirements.txt
 └── .env.example
+
+
+frontend/
+│
+├── node_modules/
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── public/
+├── README.md
+│
+├── src/
+│   ├── App.js
+│   ├── authStore.js
+│   ├── axios.js
+│
+│   ├── component/
+│   │   ├── CommonIcons.jsx
+│   │   ├── CreateSurvey.jsx
+│   │   ├── CreateSurveyContent.jsx
+│   │   ├── CreateSurveyProvider.jsx
+│   │   ├── CreateSurveySidebar.jsx
+│   │   ├── CreateSurveySteps.jsx
+│   │   ├── DashboardLayout.jsx
+│   │   ├── Header.jsx
+│   │   ├── helper.jsx
+│   │   ├── Icons.jsx
+│   │   ├── QuestionItem.jsx
+│   │   ├── QuestionList.jsx
+│   │   ├── RenderCheckboxOptions.jsx
+│   │   ├── RenderMultipleOptions.jsx
+│   │   ├── Sidebar.jsx
+│   │── getAuthToken.js
+│   ├── index.css
+│   ├── index.js
+│
+│   ├── pages/
+│   │   └── CreateSurveyPage.jsx
+│
+├── tailwind.config.js
+
 
 ```
 

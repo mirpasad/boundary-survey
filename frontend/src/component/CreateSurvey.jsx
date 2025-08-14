@@ -18,6 +18,7 @@ export default function CreateSurvey() {
   const [isLoading, setIsLoading] = useState(false);
   const [defaultType, setDefaultType] = useState('singleChoice');
 
+  // Generate: use description if present; otherwise fall back to title
   const handleGenerate = async () => {
     const description = (surveyDescription || surveyTitle || '').trim();
     if (description.length < 5) {
@@ -32,11 +33,14 @@ export default function CreateSurvey() {
       loadFromJSON(res.data);
     } catch (err) {
       console.error('Generate failed:', err);
-      if (err?.response?.status === 401) {
+      const status = err?.response?.status;
+      if (status === 503) {
+        alert('AI service is temporarily unavailable. Please retry in a moment.');
+      } else if (status === 401) {
         clearToken();
         alert('Session expired. Please try again.');
       } else {
-        alert('Failed to generate survey. Please try again.');
+        alert('Failed to generate survey. Please try again shortly.');
       }
     } finally {
       setIsLoading(false);
@@ -48,6 +52,7 @@ export default function CreateSurvey() {
       alert('Please answer all questions before submitting.');
       return;
     }
+    // TODO: POST to backend endpoint (e.g., /api/surveys/submit) with responses
     console.log('SUBMIT RESPONSES', responses);
     alert('Responses captured (see console). Wire this to a POST endpoint next.');
   };

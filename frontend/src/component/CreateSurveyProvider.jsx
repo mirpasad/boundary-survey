@@ -24,25 +24,24 @@ export function CreateSurveyProvider({ children }) {
   const [surveyDescription, setSurveyDescription] = useState('');
   const [questions, setQuestions] = useState([]);
 
-  // modes & responses
+  // mode & responses
   const [mode, setMode] = useState('edit'); // 'edit' | 'respond'
   const [responses, setResponses] = useState({});
 
   const setAnswer = (qid, value) => setResponses((prev) => ({ ...prev, [qid]: value }));
   const resetAnswers = () => setResponses({});
 
-  // NEW: reset entire survey
+  // Reset entire survey
   const resetSurvey = () => {
     setSurveyTitle('');
     setSurveyDescription('');
     setQuestions([]);
     setMode('edit');
     resetAnswers();
-    // scroll to top for convenience
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // editing actions
+  // Editing actions
   const addNewQuestion = (type = 'singleChoice') => setQuestions((p) => [...p, makeQuestion(type)]);
   const handleQuestionTitleChange = (i, t) =>
     setQuestions((p) => { const n=[...p]; n[i]={...n[i], title:t}; return n; });
@@ -78,7 +77,7 @@ export function CreateSurveyProvider({ children }) {
     setQuestions((p) => { const n=[...p]; const [m]=n.splice(from,1); n.splice(to,0,m); return n; });
   };
 
-  // payload -> UI
+  // Backend → UI
   const loadFromJSON = (payload) => {
     const allowed = new Set(['multipleChoice','singleChoice','openQuestion','shortAnswer','scale','npsScore']);
     setSurveyTitle(payload?.title || surveyTitle || '');
@@ -93,11 +92,11 @@ export function CreateSurveyProvider({ children }) {
         ...(q.options ? { options: q.options.map((t) => ({ id: nanoid(), text: String(t) })) } : {}),
       }));
     setQuestions(normalized);
-    resetAnswers();
+    resetAnswers();     // start at 0% on new survey
     setMode('respond');
   };
 
-  // validation
+  // Validation & progress
   const isQuestionAnswered = (q) => {
     const ans = responses[q.id];
     switch (q.type) {
@@ -110,10 +109,16 @@ export function CreateSurveyProvider({ children }) {
       default: return false;
     }
   };
-  const isComplete = () => questions.length>0 && questions.every(isQuestionAnswered);
+  const answeredCount = useMemo(
+    () => questions.reduce((acc, q) => acc + (isQuestionAnswered(q) ? 1 : 0), 0),
+    [questions, responses]
+  );
+  const totalCount = questions.length;
+  const progressPercent = totalCount === 0 ? 0 : Math.round((answeredCount / totalCount) * 100);
+  const isComplete = () => totalCount > 0 && answeredCount === totalCount;
 
   const value = useMemo(() => ({
-    // state exposed
+    // state
     surveyTitle, setSurveyTitle,
     surveyDescription, setSurveyDescription,
     questions,
@@ -129,14 +134,18 @@ export function CreateSurveyProvider({ children }) {
     // mode & responses
     mode, setMode,
     responses, setAnswer, resetAnswers,
-    isComplete, isQuestionAnswered,
 
-    // NEW
+    // validation/progress
+    isQuestionAnswered, isComplete,
+    answeredCount, totalCount, progressPercent,
+
+    // reset all
     resetSurvey,
-  }), [surveyTitle, surveyDescription, questions, mode, responses]);
+  }), [surveyTitle, surveyDescription, questions, mode, responses, answeredCount, totalCount, progressPercent]);
 
   return <CreateSurveyContext.Provider value={value}>{children}</CreateSurveyContext.Provider>;
 }
 
+// Back-compat exports
 export const useCreateSurveyProvider = useCreateSurvey;
 export const CreateSurveyProviderMock = CreateSurveyProvider;
